@@ -42,7 +42,7 @@ const Divider = styled.div<DirectionProps>`
 //     width?: number;
 // }
 const Pane = styled.div`
-  display: flex;
+  /* display: flex; */
   /* height: 100%; */
   /* width: 100%; */
   /* max-width: 300px; */
@@ -57,23 +57,40 @@ const Pane = styled.div`
 
 interface SplitPaneProps {
     direction: "horizontal" | "vertical";
-    minWidth?:number
+    minWidth?: number
     children: React.ReactNode; // should be jsx elements, not just booleans and objects
 }
 
-interface PaneDimensions {
-    width: number;
-    height: number;
-}
+// interface PaneDimensions {
+//     width: number;
+//     height: number;
+// }
 
 export default function SplitPane({ direction, children }: SplitPaneProps) {
     // const childrenNumber = Children.count(children);
     // trying to insert a divider in between all the child components
-    const [paneDimensions, updatePaneDimensions] = useState<
-        Record<string, PaneDimensions>
-    >({});
+    // insead what we do here is store all ther percentages of all the panes
+    // all of these percents need to equal a 100
+
+    // with this being in state, if the children changes, the paneIs in the paneFlexPercents with no longer match with anything and will need to be rebuild
+    // if the children prop changes in any way:
+    // 1. the paneFlexPercents might need to be recalculated (if the number of them chages)
+    // 1. the number of paneFlexPercents might need to be changed (might be more or less panes)
+    // 3. There might be situations where the percentages stay the same
+
+    // by using a simple array of numbers instead of a "map" we can remove the problem of out of touch panelId
+    // eg: there are 4 panes
+    // paneFlexPercents could look like [25, 25, 25, 25]
+    // and is the panes change to 3
+    // paneFlexPercents could look like [25, 25, 50]
+    // each number directly coresponds to a pane
+
+    // these have to be in state so
+    const numOfChildren = useMemo(() => Children.count(children), [children]);
+    const [paneFlexPercents, updatePanePercents] = useState<
+    number[]
+    >(Array.from({ length: numOfChildren }, () => 100 / numOfChildren)); // think about these calculateions - should they be rounded in any way??
     // what happens if the direction changes
-    const numOfChildren = Children.count(children);
     if (numOfChildren === 0) throw Error();
     if (numOfChildren === 1) return <Pane>{children}</Pane>;
     // there will be n panes and n - 1 dividers (one less divider as the last pane doesn nto need it);
@@ -106,6 +123,7 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
     }, [children]);
 
     // use a ref???
+    // no longer need this any more
     const paneToNodeMap = useMemo(
         () => new Map<string, HTMLDivElement>(),
         [children]
@@ -116,6 +134,13 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
         setIsDragging(false);
     };
 
+    const recalculatePaneFlexPercents = () => {}
+
+    useEffect(() => {
+        // when the children change, recalcualte the flex percents (pase it on the number of children)
+        recalculatePaneFlexPercents();
+    }, [children])
+
     const onMouseMove = (e: MouseEvent) => {
         // NEW POSSIBLE METHOD: JUST USE THE FLEX PROPERTY TO CHANGE THINGS
         // INSTEAD OF BASING OF THINGS OF WIDTHS< WE BASE IT OFF ON PERCENTS (split betwwen the number of panes)
@@ -123,22 +148,22 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
         // THE ONLY PROBLEM/COMPLICATION WITH THIS APPROACH IS THAT EVERYTHING HAS TO ADD UP TO 100% (THIS MIGHT INCLUDE ADJUSTING OTHER PANE VALUES TO ACCOMADATE)
         if (isDragging && currentDividerId && currentDividerPosition) {
             console.log("dragging a divider");
-            const paneDimensionClone = { ...paneDimensions }
+            const paneDimensionClone = { ...paneFlexPercents }
             const paneId = dividerToPaneMap.get(currentDividerId) as string;
             const currentPaneDimensions = paneDimensionClone[paneId];
             // need to handle threshholds (minuses and plusses)
             // also minSizes
             if (isHorizontal) {
-                const newWidth = currentPaneDimensions.width + e.clientX - currentDividerPosition;
-                console.log(newWidth);
-                paneDimensionClone[paneId].width = newWidth;
-                updateCurrentDividerPosition(e.clientX);
-                updatePaneDimensions(paneDimensionClone);
+                // const newWidth = currentPaneDimensions.width + e.clientX - currentDividerPosition;
+                // console.log(newWidth);
+                // paneDimensionClone[paneId].width = newWidth;
+                // updateCurrentDividerPosition(e.clientX);
+                // updatePanePercents(paneDimensionClone);
             } else {
-                const newHeight = currentPaneDimensions.height + e.clientY - currentDividerPosition;
-                paneDimensionClone[paneId].height = newHeight;
-                updateCurrentDividerPosition(e.clientY);
-                updatePaneDimensions(paneDimensionClone);
+                // const newHeight = currentPaneDimensions.height + e.clientY - currentDividerPosition;
+                // paneDimensionClone[paneId].height = newHeight;
+                // updateCurrentDividerPosition(e.clientY);
+                // updatePanePercents(paneDimensionClone);
             }
             //   console.log("dragging a divider");
             //   console.log("current divider", currentDividerId);
@@ -152,24 +177,24 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
         }
     };
 
-    useEffect(() => {
-        if (currentDividerId && isDragging) {
-            const paneId = dividerToPaneMap.get(currentDividerId) as string;
-            const node = paneToNodeMap.get(paneId) as HTMLDivElement;
-            if (isHorizontal) {
-                // this works for flex: 1;
-                // node.style.maxWidth = `${paneDimensions[paneId].width}px`
-                // node.style.minWidth = `${paneDimensions[paneId].width}px`
-                node.style.width = `${paneDimensions[paneId].width}px`
-                // node.style.maxWidth = `${paneDimensions[paneId].width}px`
-            } else {
-                node.style.height = `${paneDimensions[paneId].height}px`
-                // node.style.minHeight = `${paneDimensions[paneId].height}px`
-                // node.style.maxHeight = `${paneDimensions[paneId].height}px`
-                // node.style.maxHeight = `${paneDimensions[paneId].height}px`
-            }
-        }
-    }, [paneDimensions])
+    // useEffect(() => {
+    //     if (currentDividerId && isDragging) {
+    //         const paneId = dividerToPaneMap.get(currentDividerId) as string;
+    //         const node = paneToNodeMap.get(paneId) as HTMLDivElement;
+    //         if (isHorizontal) {
+    //             // this works for flex: 1;
+    //             // node.style.maxWidth = `${paneDimensions[paneId].width}px`
+    //             // node.style.minWidth = `${paneDimensions[paneId].width}px`
+    //             node.style.width = `${paneFlexPercents[paneId].width}px`
+    //             // node.style.maxWidth = `${paneDimensions[paneId].width}px`
+    //         } else {
+    //             node.style.height = `${paneFlexPercents[paneId].height}px`
+    //             // node.style.minHeight = `${paneDimensions[paneId].height}px`
+    //             // node.style.maxHeight = `${paneDimensions[paneId].height}px`
+    //             // node.style.maxHeight = `${paneDimensions[paneId].height}px`
+    //         }
+    //     }
+    // }, [paneFlexPercents])
 
     const onMouseDown = (
         e: React.MouseEvent<HTMLDivElement>,
@@ -194,32 +219,29 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
         };
     });
 
-    const setPaneIdToNode = (node: HTMLDivElement | null, paneId: string) => {
-        if (node) {
-            paneToNodeMap.set(paneId, node);
-            const paneDimensionsClone = { ...paneDimensions };
-            paneDimensionsClone[paneId] = {
-                height: node.clientHeight,
-                width: node.clientWidth,
-            };
-            // updatePaneDimensions(paneDimensionsClone);
-        } else if (paneToNodeMap.has(paneId)) {
-            // think about this!!!!
-            paneToNodeMap.delete(paneId);
-        }
-    };
+    // const setPaneIdToNode = (node: HTMLDivElement | null, paneId: string) => {
+    //     if (node) {
+    //         paneToNodeMap.set(paneId, node);
+    //         const paneDimensionsClone = { ...paneFlexPercents };
+    //         paneDimensionsClone[paneId] = {
+    //             height: node.clientHeight,
+    //             width: node.clientWidth,
+    //         };
+    //         // updatePaneDimensions(paneDimensionsClone);
+    //     } else if (paneToNodeMap.has(paneId)) {
+    //         // think about this!!!!
+    //         paneToNodeMap.delete(paneId);
+    //     }
+    // };
 
     useEffect(() => {
-        const paneDimensionsClone = { ...paneDimensions };
-        paneToNodeMap.forEach((node, paneId) => {
-            paneDimensionsClone[paneId] = {
-                height: node.clientHeight,
-                width: node.clientWidth,
-            };
+        const paneDimensionsClone = { ...paneFlexPercents };
+        paneIds.forEach((paneId) => {
+            paneDimensionsClone[paneId] = 100 / numOfChildren;
         });
         console.log(paneDimensionsClone);
-        updatePaneDimensions(paneDimensionsClone);
-    }, [children, direction]);
+        updatePanePercents(paneDimensionsClone);
+    }, [children]);
 
     return (
         <SplitPaneContainer direction={direction}>
@@ -245,7 +267,8 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
                         {/* the state should match a specific divider to a spicif pane, so when the divider is chaged, only the asocciated pane is moved*/}
                         {/* need to have consistent ids for panes and dividers                          */}
                         <Pane
-                            ref={(node) => setPaneIdToNode(node, paneId)}>
+                            // ref={(node) => setPaneIdToNode(node, paneId)}>
+                            style={{ flex: `${paneFlexPercents[paneId]} 1 0px` }}>
                             {child}
                         </Pane>
                         <Divider
