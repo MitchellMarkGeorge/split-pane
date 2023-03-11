@@ -2,10 +2,6 @@ import { nanoid } from "nanoid";
 import React, { Children, useEffect, useState, useRef, useMemo } from "react";
 import styled, { css } from "styled-components";
 
-// think about this.....
-const precise = (n: number) => {
-    return Number(n.toPrecision(10));
-}
 
 interface DirectionProps {
     direction: "horizontal" | "vertical";
@@ -22,7 +18,7 @@ const SplitPaneContainer = styled.div<DirectionProps>`
 `;
 
 const Divider = styled.div<DirectionProps>`
-  border: 5px solid #242628;
+  border: 3px solid #242628;
   ${(props) => {
         if (props.direction === "horizontal") {
             return css`
@@ -39,30 +35,11 @@ const Divider = styled.div<DirectionProps>`
     }}
 `;
 
-// interface PaneProps {
-//     height?: number;
-//     width?: number;
-// }
-const Pane = styled.div`
-  /* display: flex; */
-  /* height: 100%; */
-  /* width: 100%; */
-  /* max-width: 300px; */
-  /* min-width: 100px; */
-  /* flex: 1; */
-  /* align-items: stretch; */
-  /* flex-basis: 1; // for some reason with it being like this it refuses to move */
-  overflow: hidden;
-  /* align-items: center; */
-  /* justify-content: center; */
-`;
 
 interface SplitPaneProps {
     direction: "horizontal" | "vertical";
     minWidth?: number;
-    // children: React.ReactNode; // should be jsx elements, not just booleans and objects
-    children: JSX.Element[]; // should be jsx elements, not just booleans and objects
-    // TODO might use JSX.Element[] instead
+    children: JSX.Element | JSX.Element[]; // allows only jsx elements and arrays
 }
 
 // interface PaneDimensions {
@@ -99,7 +76,7 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
     // might have to use Number.toPrecision() or Number.toFixed()
     // what happens if the direction changes
     if (numOfChildren === 0) throw Error();
-    if (numOfChildren === 1) return <Pane style={{ flex: 1}}>{children}</Pane>;
+    // if (numOfChildren === 1) return <Pane style={{ flex: 1}}>{children}</Pane>;
     // there will be n panes and n - 1 dividers (one less divider as the last pane doesn nto need it);
     const [isDragging, setIsDragging] = useState(false);
     const [initalDividerPosition, setInitalDividerPosition] = useState<
@@ -110,6 +87,7 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
     );
 
     const paneNodes = useRef<HTMLDivElement[]>([]);
+    const isMounted = useRef(false);
     // useing useMemo so all of these internal datastructures can be "rebuilt" whenever the children prop chages
     //   const paneIds: string[] = useMemo(
     //     () => Array.from({ length: numOfChildren }, () => nanoid()),
@@ -146,12 +124,21 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
         // setInitalDividerPosition(null);
     };
 
-    const recalculatePaneFlexPercents = () => { };
+    const recalculatePaneFlexPercents = () => {
+        // what is the flex percents are not even??
+        const newPaneFlexPercents = Array.from({ length: numOfChildren }, () => (100 / numOfChildren))
+        updatePanePercents(newPaneFlexPercents);
+     };
 
     useEffect(() => {
         // when the children change, recalcualte the flex percents (base it on the number of children)
-        recalculatePaneFlexPercents();
-    }, [children]);
+        if (isMounted.current) {
+            recalculatePaneFlexPercents();
+            console.log(paneNodes, direction);
+        } else {
+            isMounted.current = true;
+        }
+    }, [numOfChildren]);
 
     const getPercentageDifference = (a: number, b: number) => {
         if (a === 0 && b === 0) return 0;
@@ -207,8 +194,10 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
 
             // this represents the sums of both pane flex percents. we do this as in this context, we are trying to share the space of these two panes
             const paneSizeSum =  firstPaneSize + secondPaneSize;
+            // by design, this will always be 100 (representing 100%)
             const flexPercentSum = firstPaneFlexPercent + secondPaneFlexPercent;
             // would recalculate the paneFlexPerc
+            // both pageX/Y and clientX/Y work
             let nextDividerPosition = isHorizontal ? e.pageX : e.pageY;
             const positionDifference = nextDividerPosition - initalDividerPosition;
 
@@ -368,7 +357,7 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
     return (
         <SplitPaneContainer direction={direction}>
             {Children.map(children, (child, index) => {
-                const isLastChild = index == Children.count(children) - 1;
+                const isLastChild = index == numOfChildren - 1;
                 // const paneId = paneIds[index];
                 // should i do the ref for this???
                 const paneStyle: React.CSSProperties = {
@@ -380,13 +369,13 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
                 };
                 if (isLastChild)
                     return (
-                        <Pane
+                        <div
                             ref={(node) => addPaneNode(node, index)}
                             // style={{ flex: `${paneFlexPercents[index]} 1 0` }}>
                             style={paneStyle}
                         >
                             {child}
-                        </Pane>
+                        </div>
                     );
 
                 // const dividerId = dividerIds[index];
@@ -397,14 +386,14 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
                         {/* use state to up date width/height as needed and have it reflected in styled compoenents*/}
                         {/* the state should match a specific divider to a spicif pane, so when the divider is chaged, only the asocciated pane is moved*/}
                         {/* need to have consistent ids for panes and dividers                          */}
-                        <Pane
+                        <div
                             // ref={(node) => setPaneIdToNode(node, paneId)}>
                             ref={(node) => addPaneNode(node, index)}
                             // style={{ flex: `${paneFlexPercents[index]} 1 0` }}>
                             style={paneStyle}
                         >
                             {child}
-                        </Pane>
+                        </div>
                         <Divider
                             direction={direction}
                             onMouseDown={(e) => onMouseDown(e, index)}
