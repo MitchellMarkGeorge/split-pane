@@ -14,18 +14,20 @@ const SplitPaneContainer = styled.div<DirectionProps>`
   overflow: hidden;
 `;
 
-const Divider = styled.div<DirectionProps>`
+const Divider = styled.div<DirectionProps & { isDisabled: boolean }>`
   border: 3px solid #242628;
   ${(props) => {
     if (props.direction === "horizontal") {
       return css`
         height: 100%;
-        cursor: col-resize;
+        ${!props.isDisabled && 'cursor: col-resize;'}
+        /* cursor: col-resize; */
       `;
     } else
       return css`
         width: 100%;
-        cursor: row-resize;
+        ${!props.isDisabled && 'cursor: row-resize;'}
+        /* cursor: row-resize; */
       `;
   }}
 `;
@@ -33,12 +35,18 @@ const Divider = styled.div<DirectionProps>`
 interface SplitPaneProps {
   direction: "horizontal" | "vertical";
   minWidth?: number;
+  // thing about this feature...
+  disableResize?: boolean;
   // think about defaultSizes, minSizes, and maxSizes
   children: React.ReactNode; // using ReactNode gives the most flexibility (allows for things like conditional rendering)
 }
 
 // use memo() so it only rerenders when direction and children change??
-export default function SplitPane({ direction, children }: SplitPaneProps) {
+export default function SplitPane({
+  direction,
+  children,
+  disableResize = false,
+}: SplitPaneProps) {
   // remove all children that are either null, undefined, or a boolean (these values are normally remenats of conditiuonal rendering)
   // if a single child is passed in, it also wraps it in an array
   // is no valid children are found, it returns an empty array
@@ -176,6 +184,7 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
     e: React.MouseEvent<HTMLDivElement>,
     dividerIndex: number
   ) => {
+    if (disableResize) return;
     // both pageX/Y and clientX/Y work
     if (isHorizontal) {
       // x for horizontal dividers
@@ -188,8 +197,10 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
     setIsDragging(true);
   };
   useEffect(() => {
-    document.addEventListener("mouseup", onMouseUp);
-    document.addEventListener("mousemove", onMouseMove);
+    if (!disableResize) {
+      document.addEventListener("mouseup", onMouseUp);
+      document.addEventListener("mousemove", onMouseMove);
+    }
     return () => {
       document.removeEventListener("mouseup", onMouseUp);
       document.removeEventListener("mousemove", onMouseMove);
@@ -239,6 +250,7 @@ export default function SplitPane({ direction, children }: SplitPaneProps) {
             </div>
             {/*  have a Divider handler?? */}
             <Divider
+              isDisabled={disableResize}
               direction={direction}
               onMouseDown={(e) => onMouseDown(e, index)}
             />

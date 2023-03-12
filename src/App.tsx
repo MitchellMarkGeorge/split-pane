@@ -22,6 +22,8 @@ function App() {
     "vertical"
   );
 
+  const [isDisabled, toggleIsDisabled] = useState(false)
+
   const array = Array.from({ length: numOfChildren }, (_: never, i: number) => (
     <Demo key={i}>{i + 1}</Demo>
   ));
@@ -44,13 +46,14 @@ function App() {
 
   return (
     <Container>
-      <SplitPane direction="horizontal">
+      <SplitPane direction="horizontal" disableResize={isDisabled}>
         <SplitPane direction={direction}>{array}</SplitPane>
         <Demo>2</Demo>
       </SplitPane>
       <button onClick={addChild}>Add Child</button>
       <button onClick={removeChild}>Remove Child</button>
       <button onClick={toggleDirection}>Toggle Direction</button>
+      <button onClick={() => toggleIsDisabled(d => !d)}>Toggle Resize</button>
     </Container>
   );
 }
