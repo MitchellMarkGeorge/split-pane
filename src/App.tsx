@@ -1,6 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
-import SplitPane from "./components/SplitPane";
+import SplitPane, { SplitPaneDirection } from "./components/SplitPane";
 
 const Demo = styled.div`
   height: 100%;
@@ -18,13 +18,11 @@ const Container = styled.div`
 
 function App() {
   const [numOfChildren, setNumOfChildren] = useState(1);
-  const [direction, setDirection] = useState<"vertical" | "horizontal">(
-    "vertical"
-  );
+  const [direction, setDirection] = useState<SplitPaneDirection>("vertical");
 
-  const [isDisabled, toggleIsDisabled] = useState(false)
+  const [isEnabled, toggleIsEnabled] = useState(true);
 
-  const array = Array.from({ length: numOfChildren }, (_: never, i: number) => (
+  const array = Array.from({ length: numOfChildren }, (_, i) => (
     <Demo key={i}>{i + 1}</Demo>
   ));
   const addChild = () => {
@@ -46,14 +44,14 @@ function App() {
 
   return (
     <Container>
-      <SplitPane direction="horizontal" disableResize={isDisabled}>
+      <SplitPane direction="horizontal" enableResize={isEnabled}>
         <SplitPane direction={direction}>{array}</SplitPane>
         <Demo>2</Demo>
       </SplitPane>
       <button onClick={addChild}>Add Child</button>
       <button onClick={removeChild}>Remove Child</button>
       <button onClick={toggleDirection}>Toggle Direction</button>
-      <button onClick={() => toggleIsDisabled(d => !d)}>Toggle Resize</button>
+      <button onClick={() => toggleIsEnabled((d) => !d)}>Toggle Resize</button>
     </Container>
   );
 }

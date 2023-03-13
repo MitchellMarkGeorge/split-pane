@@ -2,8 +2,10 @@ import React, { useEffect, useState, useRef, useMemo } from "react";
 import styled, { css } from "styled-components";
 import { getValidChildren } from "./utils";
 
+export type SplitPaneDirection = "horizontal" | "vertical";
+
 interface DirectionProps {
-  direction: "horizontal" | "vertical";
+  direction: SplitPaneDirection;
 }
 const SplitPaneContainer = styled.div<DirectionProps>`
   display: flex;
@@ -14,29 +16,30 @@ const SplitPaneContainer = styled.div<DirectionProps>`
   overflow: hidden;
 `;
 
-const Divider = styled.div<DirectionProps & { isDisabled: boolean }>`
-  border: 3px solid #242628;
+const Divider = styled.div<DirectionProps & { isEnabled: boolean }>`
+  /* border: 3px solid #242628; */
+  background-color: #242628;
   ${(props) => {
     if (props.direction === "horizontal") {
       return css`
         height: 100%;
-        ${!props.isDisabled && 'cursor: col-resize;'}
-        /* cursor: col-resize; */
+        width: 1px;
+        ${props.isEnabled && "cursor: col-resize;"}/* cursor: col-resize; */
       `;
     } else
       return css`
+        height: 1px;
         width: 100%;
-        ${!props.isDisabled && 'cursor: row-resize;'}
-        /* cursor: row-resize; */
+        ${props.isEnabled && "cursor: row-resize;"}/* cursor: row-resize; */
       `;
   }}
 `;
 
 interface SplitPaneProps {
-  direction: "horizontal" | "vertical";
-  minWidth?: number;
-  // thing about this feature...
-  disableResize?: boolean;
+  direction: SplitPaneDirection;
+  enableResize?: boolean;
+  // minSize?: number | number[];
+  // defaultSize?: number | number[];
   // think about defaultSizes, minSizes, and maxSizes
   children: React.ReactNode; // using ReactNode gives the most flexibility (allows for things like conditional rendering)
 }
@@ -45,8 +48,10 @@ interface SplitPaneProps {
 export default function SplitPane({
   direction,
   children,
-  disableResize = false,
-}: SplitPaneProps) {
+  enableResize = true,
+}: // minSize,
+// defaultSize,
+SplitPaneProps) {
   // remove all children that are either null, undefined, or a boolean (these values are normally remenats of conditiuonal rendering)
   // if a single child is passed in, it also wraps it in an array
   // is no valid children are found, it returns an empty array
@@ -69,6 +74,15 @@ export default function SplitPane({
   // each number directly coresponds to a pane
 
   const numOfChildren = validChildren.length;
+  // if (minSize !== undefined) {
+  //   if (Array.isArray(minSize)) {
+  //     if (numOfChildren !== minSize.length) throw Error('number of children and min sizes should match')
+  //     const sum = minSize.reduce((a, b) => a + b, 0);
+  //     if (sum !== 100) throw Error('minSize must equal to 100')
+  //   } else {
+  //     if (minSize < 0 || minSize > 100) throw Error();
+  //   }
+  // }
   // if I use the flex approach, I am pretty muich splting up the container into a 100 parts and sharing them out to each pane
   const [paneFlexPercents, updatePanePercents] = useState<number[]>(
     Array.from({ length: numOfChildren }, () => 100 / numOfChildren)
@@ -132,6 +146,7 @@ export default function SplitPane({
       let firstPaneSize = isHorizontal
         ? firstPaneDomNode.offsetWidth
         : firstPaneDomNode.offsetHeight;
+
       let secondPaneSize = isHorizontal
         ? secondPaneDomNode.offsetWidth
         : secondPaneDomNode.offsetHeight;
@@ -142,6 +157,7 @@ export default function SplitPane({
       // const flexPercentSum = firstPaneFlexPercent + secondPaneFlexPercent;
       // both pageX/Y and clientX/Y work
       let nextDividerPosition = isHorizontal ? e.pageX : e.pageY;
+      //   let nextDividerPosition = isHorizontal ? e.clientX : e.clientY;
       const positionDifference = nextDividerPosition - initalDividerPosition;
 
       firstPaneSize += positionDifference;
@@ -175,35 +191,36 @@ export default function SplitPane({
     }
   };
 
-  function reMapArray(array: number[], changedIndex: number, arraySum = 100) {
-    const sum = array.reduce((a, b) => a + b);
-    const adjust = (sum - arraySum) / (array.length - 1);
-    return array.map((a, i) => (i === changedIndex ? a : a - adjust));
-  }
   const onMouseDown = (
     e: React.MouseEvent<HTMLDivElement>,
     dividerIndex: number
   ) => {
-    if (disableResize) return;
-    // both pageX/Y and clientX/Y work
-    if (isHorizontal) {
-      // x for horizontal dividers
-      setInitalDividerPosition(e.pageX);
-    } else {
-      // y for vertical dividers
-      setInitalDividerPosition(e.pageY);
+    if (enableResize) {
+      // both pageX/Y and clientX/Y work
+      if (isHorizontal) {
+        // x for horizontal dividers
+        setInitalDividerPosition(e.pageX);
+        // setInitalDividerPosition(e.clientX);
+      } else {
+        // y for vertical dividers
+        setInitalDividerPosition(e.pageY);
+        // setInitalDividerPosition(e.clientY);
+      }
+      setCurrentDividerIndex(dividerIndex);
+      setIsDragging(true);
     }
-    setCurrentDividerIndex(dividerIndex);
-    setIsDragging(true);
   };
   useEffect(() => {
-    if (!disableResize) {
+    if (enableResize) {
       document.addEventListener("mouseup", onMouseUp);
       document.addEventListener("mousemove", onMouseMove);
     }
     return () => {
-      document.removeEventListener("mouseup", onMouseUp);
-      document.removeEventListener("mousemove", onMouseMove);
+      // should these only be called is enableResize is true???
+      if (enableResize) {
+        document.removeEventListener("mouseup", onMouseUp);
+        document.removeEventListener("mousemove", onMouseMove);
+      }
     };
   });
 
@@ -250,7 +267,7 @@ export default function SplitPane({
             </div>
             {/*  have a Divider handler?? */}
             <Divider
-              isDisabled={disableResize}
+              isEnabled={enableResize}
               direction={direction}
               onMouseDown={(e) => onMouseDown(e, index)}
             />
