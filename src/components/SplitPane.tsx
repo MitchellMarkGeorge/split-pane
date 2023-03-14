@@ -23,12 +23,12 @@ const Divider = styled.div<DirectionProps & { isEnabled: boolean }>`
     if (props.direction === "horizontal") {
       return css`
         height: 100%;
-        width: 1px;
+        width: 2px;
         ${props.isEnabled && "cursor: col-resize;"}/* cursor: col-resize; */
       `;
     } else
       return css`
-        height: 1px;
+        height: 2px;
         width: 100%;
         ${props.isEnabled && "cursor: row-resize;"}/* cursor: row-resize; */
       `;
@@ -139,6 +139,9 @@ SplitPaneProps) {
       // console.log(paneFlexPercentsClone);
       // with this approach, we only handle a max of 2 panes at a time: the panes at either side of the divider
       // the first pane that is being resized and the second pane that is being resized into
+      const firstPaneFlexPercent = paneFlexPercentsClone[currentDividerIndex];
+      const secondPaneFlexPercent = paneFlexPercentsClone[currentDividerIndex + 1];
+
       const firstPaneDomNode = paneNodes.current[currentDividerIndex];
       const secondPaneDomNode = paneNodes.current[currentDividerIndex + 1];
       if (!firstPaneDomNode || !secondPaneDomNode) return;
@@ -153,8 +156,12 @@ SplitPaneProps) {
 
       // this represents the sums of both pane flex percents. we do this as in this context, we are trying to share the space of these two panes
       const paneSizeSum = firstPaneSize + secondPaneSize;
-      // by design, this will always be 100 (representing 100%)
-      // const flexPercentSum = firstPaneFlexPercent + secondPaneFlexPercent;
+      // this is not always equal to 100... this sum represents the ammount of percentage space (out of 100) that 2 panes share
+      // eg: if there were 4 panes, this would be 50, if there were 3 panes, it would be ~66.6667
+      const flexPercentSum = firstPaneFlexPercent + secondPaneFlexPercent;
+      // const flexPercentSum = (100 / numOfChildren) * 2;
+      // const flexPercentSum = 100;
+      // console.log(flexPercentSum);
       // both pageX/Y and clientX/Y work
       let nextDividerPosition = isHorizontal ? e.pageX : e.pageY;
       //   let nextDividerPosition = isHorizontal ? e.clientX : e.clientY;
@@ -176,16 +183,19 @@ SplitPaneProps) {
         secondPaneSize = 0;
       }
 
-      // flexPercentSum will always be 100 as all flex-grow percentages sum up to 100
-      // const newFirstPaneFlexPercent = flexPercentSum * (firstPaneSize / paneSizeSum);
-      // const newSecondPaneFlexPercent = flexPercentSum * (secondPaneSize / paneSizeSum);
+      console.log(flexPercentSum);
 
-      const newFirstPaneFlexPercent = 100 * (firstPaneSize / paneSizeSum);
-      const newSecondPaneFlexPercent = 100 * (secondPaneSize / paneSizeSum);
+      // flexPercentSum will always be 100 as all flex-grow percentages sum up to 100
+      const newFirstPaneFlexPercent = flexPercentSum * (firstPaneSize / paneSizeSum);
+      const newSecondPaneFlexPercent = flexPercentSum * (secondPaneSize / paneSizeSum);
+
+      // const newFirstPaneFlexPercent = 100 * (firstPaneSize / paneSizeSum);
+      // const newSecondPaneFlexPercent = 100 * (secondPaneSize / paneSizeSum);
 
       paneFlexPercentsClone[currentDividerIndex] = newFirstPaneFlexPercent;
       paneFlexPercentsClone[currentDividerIndex + 1] = newSecondPaneFlexPercent;
       console.log(paneFlexPercentsClone);
+      console.log(paneFlexPercentsClone.reduce((a, b) => a + b, 0))
       updatePanePercents(paneFlexPercentsClone);
       setInitalDividerPosition(nextDividerPosition);
     }

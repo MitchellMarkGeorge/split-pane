@@ -17,8 +17,8 @@ const Container = styled.div`
 `;
 
 function App() {
-  const [numOfChildren, setNumOfChildren] = useState(1);
-  const [direction, setDirection] = useState<SplitPaneDirection>("vertical");
+  const [numOfChildren, setNumOfChildren] = useState(3);
+  const [direction, setDirection] = useState<SplitPaneDirection>("horizontal");
 
   const [isEnabled, toggleIsEnabled] = useState(true);
 
@@ -44,9 +44,8 @@ function App() {
 
   return (
     <Container>
-      <SplitPane direction="horizontal" enableResize={isEnabled}>
-        <SplitPane direction={direction}>{array}</SplitPane>
-        <Demo>2</Demo>
+      <SplitPane direction={direction} enableResize={isEnabled}>
+        {array}
       </SplitPane>
       <button onClick={addChild}>Add Child</button>
       <button onClick={removeChild}>Remove Child</button>
